@@ -10,6 +10,8 @@ namespace DataMining2
 {
     public class DisneylandReview
     {
+        //Review_ID,Rating,Year_Month,Reviewer_Location,Review_Text,Branch
+
         [LoadColumn(0)]
         public int ReviewId { get; set; }
 
@@ -17,7 +19,7 @@ namespace DataMining2
         public int Rating { get; set; }
 
         [LoadColumn(2)]
-        public DateOnly YearMonth { get; set; }
+        public string YearMonth { get; set; }
 
         [LoadColumn(3)]
         public string ReviewerLocation { get; set; }

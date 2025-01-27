@@ -1,4 +1,5 @@
 ﻿using Microsoft.ML;
+using System.Linq;
 
 namespace DataMining2
 {
@@ -22,18 +23,20 @@ namespace DataMining2
             ctx = new MLContext();
 
             // read the input data into the system
-            trainingData = ctx.Data.LoadFromTextFile<DisneylandReview>(dataPath, hasHeader: true);
+            trainingData = ctx.Data.LoadFromTextFile<DisneylandReview>(dataPath, hasHeader: true, separatorChar: ',');
 
             // build a data pipeline (transforming data into something that works)
-            var pipeline = ctx.Transforms.Text
-                .FeaturizeText("Features", nameof(DisneylandReview.ReviewText))
-                .Append(ctx.BinaryClassification.Trainers.LbfgsLogisticRegression(nameof(DisneylandReview.Rating), "Features"));
+            var pipeline = ctx.Transforms.Conversion.MapValueToKey(inputColumnName: "Rating", outputColumnName: "Label")
+                .Append(ctx.Transforms.Text.FeaturizeText(inputColumnName: "ReviewText", outputColumnName: "FeaturizedReviewText")
+                .Append(ctx.Transforms.Concatenate("Features", "FeaturizedReviewText"))
+                .AppendCacheCheckpoint(ctx)
+                .Append(ctx.MulticlassClassification.Trainers.SdcaMaximumEntropy("Label","Features")));
 
             // train model (make it run the guantlet)
             trainedModel = pipeline.Fit(trainingData);
 
             // consume the model (make predictions)
-            var predictionEngine = ctx.Model.CreatePredictionEngine<DisneylandReview, DisneylandPrediction>(trainedModel);
+         
 
             // capture some text to test with
             var sampleStatement = new DisneylandReview
@@ -47,10 +50,21 @@ namespace DataMining2
 
             };
 
+            var prediction = Predict(sampleStatement);
+            Console.WriteLine($"\treview Text is: {sampleStatement.ReviewText}\n\tPrediction Rating: {prediction.Prediction}\n\tActual Rating: {sampleStatement.Rating}.\n");
 
-            var prediction = predictionEngine.Predict(sampleStatement);
+            for ( int i = 0; i < prediction.Score.Length; i++ )
+            {
+                Console.WriteLine($"Score {i + 1}: {prediction.Score[i]}");
+            }
 
             Console.ReadLine();
+        }
+        public DisneylandPrediction? Predict(DisneylandReview review)
+        {
+            var predictionEngine = ctx.Model.CreatePredictionEngine<DisneylandReview, DisneylandPrediction>(trainedModel);
+            var prediction = predictionEngine.Predict(review);
+            return prediction;
         }
         static void Main(string[] args)
         {

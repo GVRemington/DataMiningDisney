@@ -10,6 +10,7 @@ namespace DataMining2
         private IDataView trainingData;
         private string modelPath;
         private ITransformer trainedModel;
+       
 
         // prediction engine with input and output types
         // put variables here to make them global without making them global through the namespace
@@ -20,7 +21,7 @@ namespace DataMining2
             modelPath = Path.Combine(Environment.CurrentDirectory, "models\\model.zip");
 
             // Create a (machine learning context) Context () will be a member of the program class variables
-            ctx = new MLContext();
+            ctx = new MLContext(0);
 
             // read the input data into the system
             trainingData = ctx.Data.LoadFromTextFile<DisneylandReview>(dataPath, hasHeader: true, separatorChar: ',');
@@ -30,7 +31,8 @@ namespace DataMining2
                 .Append(ctx.Transforms.Text.FeaturizeText(inputColumnName: "ReviewText", outputColumnName: "FeaturizedReviewText")
                 .Append(ctx.Transforms.Concatenate("Features", "FeaturizedReviewText"))
                 .AppendCacheCheckpoint(ctx)
-                .Append(ctx.MulticlassClassification.Trainers.SdcaMaximumEntropy("Label","Features")));
+                .Append(ctx.MulticlassClassification.Trainers.LbfgsMaximumEntropy("Label", "Features"))); //This is the trainer...we can change the kind of trainer
+                                //.Append(ctx.MulticlassClassification.Trainers.SdcaMaximumEntropy("Label","Features")));
 
             // train model (make it run the guantlet)
             trainedModel = pipeline.Fit(trainingData);
